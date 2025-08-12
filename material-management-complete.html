@@ -1,0 +1,2884 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Management - Sistem Manajemen Material Supermarket</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* CSS Variables matching globals.css */
+        :root {
+            --font-size: 14px;
+            --background: #ffffff;
+            --foreground: oklch(0.145 0 0);
+            --primary: #030213;
+            --primary-foreground: oklch(1 0 0);
+            --secondary: oklch(0.95 0.0058 264.53);
+            --border: rgba(0, 0, 0, 0.1);
+            --radius: 0.625rem;
+        }
+
+        html { font-size: var(--font-size); }
+
+        /* Animations */
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Tab System */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Modal System */
+        .modal { 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: none; align-items: center;
+            justify-content: center; z-index: 50; opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal.active { display: flex; opacity: 1; }
+
+        /* Toast System */
+        .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 100; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { 
+            padding: 0.75rem 1rem; border-radius: 0.5rem; color: white; font-size: 0.875rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: translateX(100%);
+            animation: slideIn 0.3s ease-out forwards; max-width: 24rem;
+        }
+        @keyframes slideIn { to { transform: translateX(0); } }
+        .toast.success { background-color: #059669; }
+        .toast.error { background-color: #dc2626; }
+        .toast.warning { background-color: #d97706; }
+        .toast.info { background-color: #2563eb; }
+
+        /* Progress Bar */
+        .progress-bar { transition: width 0.3s ease-in-out; background-color: #3b82f6; height: 100%; border-radius: inherit; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+
+        /* Button Hover Effects */
+        .btn-hover { transition: all 0.2s ease; }
+        .btn-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        .btn-hover:active { transform: translateY(0); }
+
+        /* Material Card Hover */
+        .material-card { transition: all 0.3s ease; }
+        .material-card:hover { transform: translateY(-2px); }
+
+        /* Badge Styling */
+        .badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 0.125rem 0.625rem; font-size: 0.75rem; font-weight: 600; }
+        .badge-default { background-color: #111827; color: #f9fafb; }
+        .badge-secondary { background-color: #f3f4f6; color: #374151; }
+        .badge-outline { background-color: transparent; color: #374151; border: 1px solid #e5e7eb; }
+        .badge-success { background-color: #059669; color: white; }
+        .badge-warning { background-color: #d97706; color: white; }
+        .badge-error { background-color: #dc2626; color: white; }
+
+        /* Input Styling */
+        .input { 
+            display: flex; height: 2.5rem; width: 100%; border-radius: 0.375rem; border: 1px solid #e5e7eb;
+            background-color: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; transition: border-color 0.2s;
+        }
+        .input:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2); }
+
+        /* Button Styling */
+        .btn { 
+            display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+            border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s;
+            border: none; cursor: pointer; padding: 0.5rem 1rem; height: 2.5rem;
+        }
+        .btn-default { background-color: #111827; color: #f9fafb; }
+        .btn-default:hover { background-color: #1f2937; }
+        .btn-outline { background-color: transparent; border: 1px solid #e5e7eb; color: #374151; }
+        .btn-outline:hover { background-color: #f9fafb; color: #111827; }
+        .btn-green { background-color: #059669; color: white; }
+        .btn-green:hover { background-color: #047857; }
+        .btn-blue { background-color: #2563eb; color: white; }
+        .btn-blue:hover { background-color: #1d4ed8; }
+        .btn-red { background-color: #dc2626; color: white; }
+        .btn-red:hover { background-color: #b91c1c; }
+        .btn-orange { background-color: #ea580c; color: white; }
+        .btn-orange:hover { background-color: #c2410c; }
+        .btn-purple { background-color: #9333ea; color: white; }
+        .btn-purple:hover { background-color: #7c3aed; }
+        .btn-yellow { background-color: #ca8a04; color: white; }
+        .btn-yellow:hover { background-color: #a16207; }
+
+        /* Card Styling */
+        .card { border-radius: 0.5rem; border: 1px solid #e5e7eb; background-color: white; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+
+        /* Tabs Styling */
+        .tabs-list { background-color: #f3f4f6; padding: 0.25rem; border-radius: 0.5rem; display: inline-flex; height: 2.5rem; align-items: center; }
+        .tabs-trigger { 
+            display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+            border-radius: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; font-weight: 500;
+            background: transparent; border: none; cursor: pointer; transition: all 0.2s; color: #6b7280;
+        }
+        .tabs-trigger:hover { background-color: #e5e7eb; color: #374151; }
+        .tabs-trigger.active { background-color: white; color: #111827; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+
+        /* Digital Clock Font */
+        .digital-clock { font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Header -->
+    <div class="bg-white shadow-lg border-b-4 border-green-500">
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Main Header Row with Logos -->
+            <div class="flex items-center justify-between mb-4">
+                <!-- Left Logo - Universitas Airlangga -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white p-2 rounded-xl shadow-md border border-gray-200">
+                        <img 
+                            src="images/logo-unair.png" 
+                            alt="Universitas Airlangga logo"
+                            class="w-24 h-24 object-contain"
+                            onerror="this.style.display='none'"
+                            style="background: radial-gradient(circle, #FFD700 0%, #FF8C00 50%, #1E3A8A 100%); border-radius: 50%;"
+                        >
+                    </div>
+                </div>
+
+                <!-- Center - Main Title -->
+                <div class="flex items-center space-x-4 flex-1 justify-center">
+                    <div class="bg-white p-2 rounded-xl shadow-lg border border-gray-200">
+                        <img 
+                            src="images/logo legrand.png" 
+                            alt="legrand logo"
+                            class="w-12 h-12 object-contain"
+                            onerror="this.style.display='none'"
+                            style="background: radial-gradient(circle, #ffffff 0%, #ffffff 50%, #ffffff 100%); border-radius: 4px;"
+                        >
+                    </div>
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Material Supermarket</h1>
+                        <p class="text-lg text-gray-600">Sistem Manajemen Material Supermarket</p>
+                    </div>
+                </div>
+
+                <!-- Right Logo - Sampoerna University -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white p-2 rounded-xl shadow-md border border-gray-200">
+                        <img 
+                            src="images/logo usbi.png" 
+                            alt="Universitas Sampoerna"
+                            class="w-24 h-24 object-contain"
+                            onerror="this.style.display='none'"
+                            style="background: radial-gradient(circle, #ffffff 45%, #ffffff 55%, #ffffff 65%); border-radius: 50%;"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub Header Row with Credits and Controls -->
+            <div class="flex items-center justify-between">
+                <!-- Created By Credits -->
+                <div class="flex items-center space-x-2">
+                    <div class="text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-green-50 px-3 py-1 rounded-full border border-gray-200">
+                        <span class="font-medium">Created by:</span> Daffina Natasya & Philip Surya
+                    </div>
+                </div>
+
+                <!-- Stats and Controls -->
+                <div class="flex items-center space-x-4">
+                    <div class="badge badge-outline px-3 py-1">
+                        <i data-lucide="package" class="w-4 h-4 mr-1"></i>
+                        <span id="available-count">0</span>/<span id="total-count">27</span> Available
+                    </div>
+                    <div id="sync-badge" class="badge badge-secondary px-3 py-1 hidden">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-1"></i>
+                        <span id="sync-text">Never</span>
+                    </div>
+                    <button class="btn btn-outline btn-hover">
+                        <i data-lucide="bell" class="w-4 h-4 mr-2"></i>
+                        Notifikasi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Controls -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="card p-6 mb-6">
+            <div class="flex items-center space-x-4">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Cari material berdasarkan ID SAP atau deskripsi..."
+                        class="input pl-10 py-3"
+                    >
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="exportCompleteData()" class="btn btn-outline btn-hover">
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                        Export Excel
+                    </button>
+                    <button onclick="importFromExcel()" class="btn btn-outline btn-hover">
+                        <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
+                        Import Excel
+                    </button>
+                    <button onclick="toggleAutoSync()" id="auto-sync-btn" class="btn btn-default btn-hover">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i>
+                        Auto-Sync ON
+                    </button>
+                    <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;" onchange="handleFileImport(event)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs (5 Tabs) -->
+        <div class="space-y-6">
+            <!-- Tab Navigation -->
+            <div class="tabs-list grid grid-cols-5 lg:w-[1000px]">
+                <button class="tabs-trigger" data-tab="dashboard">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 mr-2"></i>
+                    Dashboard
+                </button>
+                <button class="tabs-trigger active" data-tab="materials">
+                    <i data-lucide="package" class="w-4 h-4 mr-2"></i>
+                    Materials
+                </button>
+                <button class="tabs-trigger" data-tab="history">
+                    <i data-lucide="bell" class="w-4 h-4 mr-2"></i>
+                    Histori (<span id="history-count">0</span>)
+                </button>
+                <button class="tabs-trigger" data-tab="adgi">
+                    <i data-lucide="truck" class="w-4 h-4 mr-2"></i>
+                    ADGI (<span id="adgi-count">0</span>)
+                </button>
+                <button class="tabs-trigger" data-tab="excel">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i>
+                    Excel Database
+                </button>
+            </div>
+
+            <!-- Dashboard Tab Content -->
+            <div id="dashboard-tab" class="tab-content">
+                <!-- System Status Header -->
+                <div class="card p-6 bg-gradient-to-r from-green-50 to-blue-50 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-green-500 p-3 rounded-xl">
+                                <i data-lucide="database" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">System Dashboard</h2>
+                                <p class="text-gray-600">Real-time Material Management Overview</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Current Time</div>
+                            <div class="text-lg font-mono font-bold text-gray-900 digital-clock" id="dashboard-current-time">--:--:--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="package" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="dashboard-total-materials">27</div>
+                                <div class="text-sm text-gray-600">Total Materials</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    <span id="dashboard-available-materials">0</span> available, <span id="dashboard-empty-materials">0</span> empty
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="warehouse" class="w-6 h-6 text-green-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="dashboard-total-stock">0</div>
+                                <div class="text-sm text-gray-600">Total Stock</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    of <span id="dashboard-total-capacity">0</span> capacity
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 rounded-lg" id="dashboard-utilization-icon-bg">
+                                <i data-lucide="bar-chart-3" class="w-6 h-6" id="dashboard-utilization-icon"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="dashboard-utilization">0%</div>
+                                <div class="text-sm text-gray-600">Utilization</div>
+                                <div class="w-20 h-2 bg-gray-200 rounded-full mt-2">
+                                    <div id="dashboard-utilization-bar" class="progress-bar h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i data-lucide="activity" class="w-6 h-6 text-purple-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="dashboard-total-activities">0</div>
+                                <div class="text-sm text-gray-600">Total Activities</div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    <span id="dashboard-today-activities">0</span> today
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bin Status Overview -->
+                <div class="card p-6 mb-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-gray-600"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Bin Status Overview</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="dashboard-bin-stats">
+                        <!-- Bin status cards will be generated here -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Today's Activity -->
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="clock" class="w-5 h-5 text-gray-600"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Today's Activity</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i>
+                                    <div>
+                                        <div class="font-medium text-gray-900">Materials Filled</div>
+                                        <div class="text-sm text-gray-600"><span id="dashboard-today-filled">0</span> units</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="trending-down" class="w-5 h-5 text-red-600"></i>
+                                    <div>
+                                        <div class="font-medium text-gray-900">Materials Taken</div>
+                                        <div class="text-sm text-gray-600"><span id="dashboard-today-taken">0</span> units</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t">
+                                <div class="text-sm text-gray-600">
+                                    Net Change: <span id="dashboard-net-change" class="font-medium">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Critical Materials -->
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Low Stock Alert</h3>
+                            <div class="badge badge-outline text-xs" id="dashboard-critical-count">0 items</div>
+                        </div>
+                        <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar" id="dashboard-critical-materials">
+                            <!-- Critical materials will be listed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Most Active Materials -->
+                <div class="card p-6 mb-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i data-lucide="activity" class="w-5 h-5 text-gray-600"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Most Active Materials</h3>
+                        <div class="badge badge-outline text-xs" id="dashboard-active-materials-count">Top 0</div>
+                    </div>
+                    <div class="space-y-3" id="dashboard-most-active-materials">
+                        <!-- Active materials will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Excel Integration Status -->
+                <div class="card p-6 bg-gradient-to-r from-blue-50 to-green-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-500 p-3 rounded-lg">
+                                <i data-lucide="file-spreadsheet" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Excel Database Status</h3>
+                                <p class="text-sm text-gray-600">Real-time synchronization with Material_Management_Database.xlsx</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="badge badge-default mb-2" id="dashboard-excel-status-badge">
+                                Auto-Sync ON
+                            </div>
+                            <div class="text-sm text-gray-600" id="dashboard-excel-last-sync">
+                                Last sync: Never
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Materials Tab Content - DEFAULT ACTIVE -->
+            <div id="materials-tab" class="tab-content active">
+                <!-- Statistics Header -->
+                <div class="card p-6 bg-gradient-to-r from-blue-50 to-green-50 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-blue-500 p-3 rounded-xl">
+                                <i data-lucide="package-2" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Material Inventory</h2>
+                                <p class="text-gray-600">Manajemen dan monitoring stok material</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold text-gray-900" id="materials-total">27</div>
+                            <div class="text-sm text-gray-600">Total Materials</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Materials Grid -->
+                <div id="materials-grid" class="space-y-4">
+                    <!-- Materials will be populated here -->
+                </div>
+
+                <!-- Summary Footer -->
+                <div id="materials-summary" class="card p-6 bg-gray-50 mt-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-gray-900" id="summary-total">27</div>
+                            <div class="text-xs text-gray-600">Total Materials</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-green-600" id="summary-available">0</div>
+                            <div class="text-xs text-gray-600">Available</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-red-600" id="summary-empty">0</div>
+                            <div class="text-xs text-gray-600">Empty</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-blue-600" id="summary-stock">0</div>
+                            <div class="text-xs text-gray-600">Total Stock</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab Content -->
+            <div id="history-tab" class="tab-content">
+                <!-- History Header -->
+                <div class="card p-6 bg-gradient-to-r from-purple-50 to-blue-50 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-purple-500 p-3 rounded-xl">
+                                <i data-lucide="activity" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Transaction History</h2>
+                                <p class="text-gray-600">Riwayat pengambilan dan pengisian material</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold text-gray-900" id="history-total-display">0</div>
+                            <div class="text-sm text-gray-600">Total Activities</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="clock" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="history-total-activities">0</div>
+                                <div class="text-sm text-gray-600">Total Aktivitas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="trending-up" class="w-6 h-6 text-green-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="history-total-filled">0</div>
+                                <div class="text-sm text-gray-600">Total Diisi</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-red-100 p-3 rounded-lg">
+                                <i data-lucide="trending-down" class="w-6 h-6 text-red-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="history-total-taken">0</div>
+                                <div class="text-sm text-gray-600">Total Diambil</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-yellow-100 p-3 rounded-lg">
+                                <i data-lucide="calendar" class="w-6 h-6 text-yellow-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="history-today-entries">0</div>
+                                <div class="text-sm text-gray-600">Hari Ini</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="card p-6 bg-gradient-to-r from-gray-50 to-blue-50 mb-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i data-lucide="filter" class="w-5 h-5 text-blue-600"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Filter & Search</h3>
+                        <div class="badge badge-outline text-xs">
+                            <span id="history-filtered-count">0</span> hasil
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input 
+                                type="text" 
+                                id="history-search"
+                                placeholder="Cari berdasarkan ID material, deskripsi, atau user..."
+                                class="input pl-10"
+                            >
+                        </div>
+                        
+                        <select id="history-action-filter" class="input w-full md:w-48">
+                            <option value="all">Semua Aktivitas</option>
+                            <option value="take">Hanya Pengambilan</option>
+                            <option value="fill">Hanya Pengisian</option>
+                        </select>
+
+                        <select id="history-sort" class="input w-full md:w-48">
+                            <option value="newest">Terbaru</option>
+                            <option value="oldest">Terlama</option>
+                        </select>
+                        
+                        <button onclick="resetHistoryFilters()" class="btn btn-outline">Reset</button>
+                    </div>
+                </div>
+
+                <!-- History List -->
+                <div id="history-list" class="space-y-3 mb-6">
+                    <div class="card p-8 text-center">
+                        <i data-lucide="package-2" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada histori</h3>
+                        <p class="text-gray-500">Aktivitas pengambilan dan pengisian material akan muncul di sini</p>
+                    </div>
+                </div>
+
+                <!-- Summary Footer -->
+                <div id="history-summary" class="card p-6 bg-gray-50 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-gray-900" id="history-summary-filtered">0</div>
+                            <div class="text-xs text-gray-600">Filtered Results</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-blue-600" id="history-summary-percentage">0%</div>
+                            <div class="text-xs text-gray-600">of Total History</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-purple-600" id="history-summary-net-change">0</div>
+                            <div class="text-xs text-gray-600">Net Stock Change</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADGI Tab Content -->
+            <div id="adgi-tab" class="tab-content">
+                <!-- ADGI Header -->
+                <div class="card p-6 bg-gradient-to-r from-orange-50 to-red-50 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-orange-500 p-3 rounded-xl">
+                                <i data-lucide="truck" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">ADGI Management</h2>
+                                <p class="text-gray-600">Pengelolaan status pengambilan material untuk ADGI</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold text-gray-900" id="adgi-total">0</div>
+                            <div class="text-sm text-gray-600">Total Pengambilan</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADGI Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="download" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="adgi-total-takes">0</div>
+                                <div class="text-sm text-gray-600">Total Pengambilan</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-yellow-100 p-3 rounded-lg">
+                                <i data-lucide="alert-circle" class="w-6 h-6 text-yellow-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="adgi-pending">0</div>
+                                <div class="text-sm text-gray-600">ADGI Pending</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="adgi-done">0</div>
+                                <div class="text-sm text-gray-600">ADGI Done</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i data-lucide="calendar" class="w-6 h-6 text-purple-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="adgi-today">0</div>
+                                <div class="text-sm text-gray-600">Hari Ini</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADGI Filters -->
+                <div class="card p-6 bg-gradient-to-r from-gray-50 to-orange-50 mb-6">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i data-lucide="filter" class="w-5 h-5 text-orange-600"></i>
+                        <h3 class="text-lg font-semibold text-gray-900">Filter & Search ADGI</h3>
+                        <div class="badge badge-outline text-xs">
+                            <span id="adgi-filtered-count">0</span> hasil
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input 
+                                type="text" 
+                                id="adgi-search"
+                                placeholder="Cari berdasarkan ID material, deskripsi, atau user..."
+                                class="input pl-10"
+                            >
+                        </div>
+                        
+                        <select id="adgi-status-filter" class="input w-full md:w-48">
+                            <option value="all">Semua Status</option>
+                            <option value="pending">ADGI Pending</option>
+                            <option value="done">ADGI Done</option>
+                        </select>
+
+                        <select id="adgi-sort" class="input w-full md:w-48">
+                            <option value="newest">Terbaru</option>
+                            <option value="oldest">Terlama</option>
+                        </select>
+                        
+                        <button onclick="resetADGIFilters()" class="btn btn-outline">Reset</button>
+                    </div>
+                </div>
+
+                <!-- ADGI List -->
+                <div id="adgi-list" class="space-y-3">
+                    <div class="card p-8 text-center">
+                        <i data-lucide="package-2" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada pengambilan material</h3>
+                        <p class="text-gray-500">Pengambilan material akan muncul di sini setelah ada transaksi</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Excel Database Tab Content -->
+            <div id="excel-tab" class="tab-content">
+                <!-- Excel Header -->
+                <div class="card p-6 bg-gradient-to-r from-green-50 via-blue-50 to-purple-50 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-gradient-to-r from-green-500 to-blue-500 p-3 rounded-xl">
+                                <i data-lucide="database" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Excel Database Center</h2>
+                                <p class="text-gray-600">Auto-sync & manual export management</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="badge badge-success px-3 py-1" id="excel-auto-sync-badge">
+                                <i data-lucide="zap" class="w-3 h-3 mr-1"></i>
+                                Auto-Sync ON
+                            </div>
+                            <div class="badge badge-outline px-3 py-1">
+                                <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
+                                <span id="excel-sync-count">0</span> syncs
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Excel Statistics -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="file-spreadsheet" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="excel-materials">27</div>
+                                <div class="text-sm text-gray-600">Materials</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="activity" class="w-6 h-6 text-green-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="excel-transactions">0</div>
+                                <div class="text-sm text-gray-600">Transactions</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-yellow-100 p-3 rounded-lg">
+                                <i data-lucide="hard-drive" class="w-6 h-6 text-yellow-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="excel-total-stock">0</div>
+                                <div class="text-sm text-gray-600">Total Stock</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i data-lucide="zap" class="w-6 h-6 text-purple-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900" id="excel-auto-syncs">0</div>
+                                <div class="text-sm text-gray-600">Auto Syncs</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-gray-900">100%</div>
+                                <div class="text-sm text-gray-600">Success Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Sync Control -->
+                <div class="card p-6 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Auto-Sync Settings</h3>
+                            <p class="text-sm text-gray-600">
+                                Auto-sync akan otomatis sinkronisasi perubahan data tanpa mendownload file. 
+                                Gunakan manual export jika membutuhkan file Excel.
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <label class="text-sm font-medium">
+                                Auto-Sync <span id="auto-sync-status">Enabled</span>
+                            </label>
+                            <div class="relative inline-block w-11 h-6">
+                                <input type="checkbox" id="auto-sync-toggle" checked class="sr-only">
+                                <div class="block bg-gray-600 w-11 h-6 rounded-full cursor-pointer" onclick="toggleAutoSyncSwitch()"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform duration-300 ease-in-out"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="last-sync-info" class="mt-4 p-3 bg-blue-50 rounded-lg hidden">
+                        <div class="flex items-center space-x-2 text-sm text-blue-700">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>Last sync: <span id="last-sync-time">Never</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Export & Import -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Export Functions -->
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="download" class="w-5 h-5 text-gray-600"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Manual Export</h3>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <button onclick="exportCompleteData()" class="btn btn-green w-full btn-hover">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i>
+                                Export Complete Data
+                            </button>
+                            
+                            <button onclick="exportLiveSnapshot()" class="btn btn-purple w-full btn-hover">
+                                <i data-lucide="zap" class="w-4 h-4 mr-2"></i>
+                                Export Live Snapshot
+                            </button>
+                            
+                            <button onclick="createExcelTemplate()" class="btn btn-blue w-full btn-hover">
+                                <i data-lucide="file-code" class="w-4 h-4 mr-2"></i>
+                                Create Template
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Import Functions -->
+                    <div class="card p-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="upload" class="w-5 h-5 text-gray-600"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Import Data</h3>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <button onclick="importFromExcel()" class="btn btn-orange w-full btn-hover">
+                                <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
+                                Import from Excel
+                            </button>
+                            
+                            <div class="text-sm text-gray-500 space-y-1">
+                                <p>• Mendukung file .xlsx dan .xls</p>
+                                <p>• Mencari sheet 'Material', 'Stock', atau 'Template'</p>
+                                <p>• Auto-sync akan aktif setelah import berhasil</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Take Material Modal (Simplified) -->
+    <div id="take-modal" class="modal">
+        <div class="card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="download" class="w-5 h-5 text-green-600"></i>
+                        <h2 class="text-xl font-bold text-gray-900">Ambil Material</h2>
+                    </div>
+                    <button onclick="closeTakeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-6">Pilih bin dan jumlah material yang akan diambil</p>
+
+                <!-- Material Info -->
+                <div class="bg-green-50 rounded-lg p-4 border border-green-200 mb-6">
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-green-100 p-2 rounded-lg">
+                            <i data-lucide="package-2" class="w-5 h-5 text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-mono text-sm font-medium text-gray-900" id="take-material-id">-</h3>
+                            <p class="text-gray-600 text-sm mt-1" id="take-material-desc">-</p>
+                            <div class="badge badge-secondary text-xs mt-2">
+                                Kapasitas: <span id="take-material-capacity">-</span> qty/bin
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simplified Bin Selection -->
+                <div class="mb-6">
+                    <label class="text-sm font-medium text-gray-900 mb-3 block">
+                        Pilih Bin untuk Mengambil Material
+                    </label>
+                    <div id="take-bin-selection" class="grid grid-cols-2 gap-3">
+                        <!-- Bin options will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Quantity Selection -->
+                <div id="take-quantity-section" class="mb-6 hidden">
+                    <hr class="mb-6">
+                    <label class="text-sm font-medium text-gray-900 mb-3 block">
+                        Jumlah yang Akan Diambil (Max: <span id="take-max-qty">0</span>)
+                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button id="take-decrease-btn" class="btn btn-outline">
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                        </button>
+                        <input type="number" id="take-quantity-input" class="input w-24 text-center" min="1" value="1">
+                        <button id="take-increase-btn" class="btn btn-outline">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                        <button id="take-max-btn" onclick="setTakeQuantityToMax()" class="btn btn-outline text-xs">
+                            Max
+                        </button>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Setelah pengambilan:</span>
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="package-2" class="w-4 h-4 text-gray-500"></i>
+                                <span class="font-medium" id="take-preview-text">0 tersisa</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex space-x-2">
+                    <button onclick="closeTakeModal()" class="btn btn-outline flex-1">Batal</button>
+                    <button id="confirm-take-btn" onclick="showTakeConfirmation()" class="btn btn-green flex-1" disabled>
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                        Ambil Material
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fill Material Modal (Simplified) -->
+    <div id="fill-modal" class="modal">
+        <div class="card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="upload" class="w-5 h-5 text-blue-600"></i>
+                        <h2 class="text-xl font-bold text-gray-900">Isi Material</h2>
+                    </div>
+                    <button onclick="closeFillModal()" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-6">Pilih bin dan jumlah material yang akan diisi</p>
+
+                <!-- Material Info -->
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <i data-lucide="package-2" class="w-5 h-5 text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-mono text-sm font-medium text-gray-900" id="fill-material-id">-</h3>
+                            <p class="text-gray-600 text-sm mt-1" id="fill-material-desc">-</p>
+                            <div class="badge badge-secondary text-xs mt-2">
+                                Kapasitas: <span id="fill-material-capacity">-</span> qty/bin
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simplified Bin Selection -->
+                <div class="mb-6">
+                    <label class="text-sm font-medium text-gray-900 mb-3 block">
+                        Pilih Bin untuk Mengisi Material
+                    </label>
+                    <div id="fill-bin-selection" class="grid grid-cols-2 gap-3">
+                        <!-- Bin options will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Quantity Selection -->
+                <div id="fill-quantity-section" class="mb-6 hidden">
+                    <hr class="mb-6">
+                    <label class="text-sm font-medium text-gray-900 mb-3 block">
+                        Jumlah yang Akan Diisi (Max: <span id="fill-max-qty">0</span>)
+                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button id="fill-decrease-btn" class="btn btn-outline">
+                            <i data-lucide="package-2" class="w-4 h-4"></i>
+                        </button>
+                        <input type="number" id="fill-quantity-input" class="input w-24 text-center" min="1" value="1">
+                        <button id="fill-increase-btn" class="btn btn-outline">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                        <button id="fill-max-btn" onclick="setFillQuantityToMax()" class="btn btn-outline text-xs">
+                            Penuh
+                        </button>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Setelah pengisian:</span>
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="warehouse" class="w-4 h-4 text-gray-500"></i>
+                                <span class="font-medium" id="fill-preview-text">0/0 (0%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Bin Warning -->
+                <div id="fill-full-warning" class="mb-6 hidden">
+                    <div class="text-center py-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <i data-lucide="warehouse" class="w-12 h-12 mx-auto text-yellow-500 mb-3"></i>
+                        <div class="text-yellow-700 font-medium mb-1">Bin Sudah Penuh</div>
+                        <div class="text-sm text-yellow-600">Tidak ada ruang untuk menambah material</div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex space-x-2">
+                    <button onclick="closeFillModal()" class="btn btn-outline flex-1">Batal</button>
+                    <button id="confirm-fill-btn" onclick="showFillConfirmation()" class="btn btn-blue flex-1" disabled>
+                        <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
+                        Isi Material
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal">
+        <div class="card max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <i data-lucide="alert-triangle" class="w-6 h-6 text-yellow-600" id="confirmation-icon"></i>
+                    <h3 class="text-lg font-semibold text-gray-900" id="confirmation-title">Konfirmasi</h3>
+                </div>
+                <p class="text-gray-600 mb-6" id="confirmation-message">Are you sure?</p>
+                <div class="flex space-x-2">
+                    <button onclick="closeConfirmationModal()" class="btn btn-outline flex-1">Batal</button>
+                    <button id="confirmation-confirm-btn" onclick="executeConfirmedAction()" class="btn btn-default flex-1">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State - Matching React App
+        const initialMaterials = [
+            { id: "X/A013604BA", description: "Joint 3 ways", qtyPerBin: 8, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "X/G005294AB", description: "Cover joint 3 ways", qtyPerBin: 25, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "X/G005320AB", description: "Screw Ejot type G", qtyPerBin: 385, bin1: 385, bin2: 385, bin3: 0, bin4: 0 },
+            { id: "R04B40HEXM12035", description: "Baut m12x35 SS304", qtyPerBin: 25, bin1: 25, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "R04WCTM12E", description: "Contact washer m12", qtyPerBin: 50, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "R04WCTM06E", description: "Contact washer m6", qtyPerBin: 500, bin1: 500, bin2: 500, bin3: 0, bin4: 0 },
+            { id: "R04B88HEXM06015E", description: "Bolt stell m6x15 ELG", qtyPerBin: 400, bin1: 202, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "R04NUTCGM06E", description: "Cage nut M6", qtyPerBin: 200, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "X/Y377A3", description: "Screw ejot type Y", qtyPerBin: 500, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "R04BEYB12035", description: "Eye bolt m12", qtyPerBin: 25, bin1: 25, bin2: 25, bin3: 0, bin4: 0 },
+            { id: "2005372", description: "LABEL FOR BROTHER TZE-211 SZ 6MM WHITE", qtyPerBin: 3, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "2005373", description: "LABEL FOR BROTHER TZE-221 SZ 9MM WHITE", qtyPerBin: 3, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "2005369", description: "LABEL FOR BROTHER TZE-231 SZ 12MM WHITE", qtyPerBin: 3, bin1: 2, bin2: 3, bin3: 0, bin4: 0 },
+            { id: "2005395", description: "SCHOEN BLADE 1.25-18 RED", qtyPerBin: 375, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "2005397", description: "SCHOEN BLADE 2.5-18 BLUE", qtyPerBin: 250, bin1: 100, bin2: 250, bin3: 0, bin4: 0 },
+            { id: "2005406", description: "SCHOEN FERRULES 2-5 NON INSULATED", qtyPerBin: 500, bin1: 500, bin2: 500, bin3: 0, bin4: 0 },
+            { id: "2005436", description: "SCHOEN RING 2.5-10 NON INSULATED", qtyPerBin: 100, bin1: 100, bin2: 100, bin3: 100, bin4: 100 },
+            { id: "2005433", description: "SCHOEN RING 2.5-5 NON INSULATED", qtyPerBin: 750, bin1: 750, bin2: 750, bin3: 0, bin4: 0 },
+            { id: "2005412", description: "SCHOEN RING 2-4 NON INSULATED", qtyPerBin: 250, bin1: 0, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "2005420", description: "SCHOEN RING 6-6 NON INSULATED", qtyPerBin: 125, bin1: 125, bin2: 125, bin3: 125, bin4: 0 },
+            { id: "2005477", description: "SCHOEN Y 1.25-3 NON INSULATED", qtyPerBin: 2000, bin1: 2000, bin2: 0, bin3: 0, bin4: 0 },
+            { id: "2005481", description: "SCHOEN Y 2.5-4 NON INSULATED", qtyPerBin: 500, bin1: 500, bin2: 500, bin3: 500, bin4: 500 },
+            { id: "2005505", description: "VINYL CABLE 2.5MM2 BK", qtyPerBin: 375, bin1: 375, bin2: 375, bin3: 375, bin4: 0 },
+            { id: "2005506", description: "VINYL CABLE 2.5MM2 BL", qtyPerBin: 375, bin1: 375, bin2: 375, bin3: 0, bin4: 0 },
+            { id: "2005507", description: "VINYL CABLE 2.5MM2 BR", qtyPerBin: 375, bin1: 375, bin2: 375, bin3: 375, bin4: 0 },
+            { id: "2005509", description: "VINYL CABLE 2.5MM2 GR", qtyPerBin: 375, bin1: 375, bin2: 375, bin3: 375, bin4: 375 },
+            { id: "2005547", description: "VINYL CABLE 6MM2 G", qtyPerBin: 250, bin1: 250, bin2: 250, bin3: 0, bin4: 0 }
+        ];
+
+        let materials = [...initialMaterials];
+        let history = [];
+        let searchTerm = '';
+        let selectedMaterial = null;
+        let selectedBin = null;
+        let autoExportEnabled = true;
+        let lastExportTime = null;
+        let isAutoSyncing = false;
+        let syncCount = 0;
+        let pendingConfirmation = null;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Material Management App Started - Complete HTML Version');
+            
+            lucide.createIcons();
+            updateAllStats();
+            renderMaterials();
+            setupEventListeners();
+            startClock();
+            loadUniversityLogos();
+            
+            console.log('✅ App initialized successfully');
+        });
+
+        // Load university logos and Legrand logo if available
+        function loadUniversityLogos() {
+            // Try to load actual logo images if available
+            const airlanggaImg = document.querySelector('img[alt="Universitas Airlangga Logo"]');
+            const sampoerrnaImg = document.querySelector('img[alt="Sampoerna University Logo"]');
+            const legrandImg = document.querySelector('img[alt="Legrand Logo"]');
+            
+            // Universitas Airlangga logo (circular logo with garuda)
+            if (airlanggaImg) {
+                // Try to load from various possible sources
+                const airlanggaSources = [
+                    'https://upload.wikimedia.org/wikipedia/id/thumb/3/35/Universitas_Airlangga_logo.svg/200px-Universitas_Airlangga_logo.svg.png',
+                    'https://unair.ac.id/wp-content/uploads/2016/05/UNAIR_LOGO-01-300x300.png',
+                    'https://images.unsplash.com/photo-1562564055-71e051d33c19?w=96&h=96&fit=crop&crop=center'
+                ];
+                
+                tryLoadImage(airlanggaImg, airlanggaSources, 0);
+            }
+
+            // Sampoerna University logo (radiating lines pattern)
+            if (sampoerrnaImg) {
+                const sampoerraSources = [
+                    'https://sampoernauniversity.ac.id/wp-content/uploads/2021/03/Sampoerna-University-Logo.png',
+                    'https://www.sampoernauniversity.ac.id/wp-content/uploads/2022/05/SU-Logo-Blue.png',
+                    'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=96&h=96&fit=crop&crop=center'
+                ];
+                
+                tryLoadImage(sampoerrnaImg, sampoerraSources, 0);
+            }
+
+            // Legrand logo
+            if (legrandImg) {
+                const legrandSources = [
+                    'https://www.legrand.com/sites/default/files/styles/logo_header/public/logo-legrand.png',
+                    'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Legrand_logo.svg/320px-Legrand_logo.svg.png',
+                    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=48&h=48&fit=crop&crop=center'
+                ];
+                
+                tryLoadImage(legrandImg, legrandSources, 0);
+            }
+        }
+
+        function tryLoadImage(imgElement, sources, index) {
+            if (index >= sources.length) return;
+            
+            const testImg = new Image();
+            testImg.onload = function() {
+                imgElement.src = sources[index];
+                imgElement.style.background = 'none';
+                imgElement.style.border = 'none';
+            };
+            testImg.onerror = function() {
+                tryLoadImage(imgElement, sources, index + 1);
+            };
+            testImg.src = sources[index];
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('search-input').addEventListener('input', function(e) {
+                searchTerm = e.target.value;
+                if (document.getElementById('materials-tab').classList.contains('active')) {
+                    renderMaterials();
+                }
+            });
+
+            // ADGI search functionality
+            document.getElementById('adgi-search').addEventListener('input', updateADGIDisplay);
+            document.getElementById('adgi-status-filter').addEventListener('change', updateADGIDisplay);
+            document.getElementById('adgi-sort').addEventListener('change', updateADGIDisplay);
+
+            // Tab switching
+            document.querySelectorAll('.tabs-trigger').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    switchTab(targetTab);
+                });
+            });
+
+            // Modal quantity controls
+            setupModalControls();
+
+            // Close modals when clicking outside
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    if (e.target.id === 'take-modal') {
+                        closeTakeModal();
+                    } else if (e.target.id === 'fill-modal') {
+                        closeFillModal();
+                    } else if (e.target.id === 'confirmation-modal') {
+                        closeConfirmationModal();
+                    }
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    exportCompleteData();
+                }
+            });
+        }
+
+        function setupModalControls() {
+            // Take modal controls
+            document.getElementById('take-decrease-btn').addEventListener('click', () => {
+                const input = document.getElementById('take-quantity-input');
+                const newValue = Math.max(1, parseInt(input.value) - 1);
+                input.value = newValue;
+                updateTakePreview();
+            });
+
+            document.getElementById('take-increase-btn').addEventListener('click', () => {
+                const input = document.getElementById('take-quantity-input');
+                const maxValue = getSelectedBinAvailable();
+                const newValue = Math.min(maxValue, parseInt(input.value) + 1);
+                input.value = newValue;
+                updateTakePreview();
+            });
+
+            document.getElementById('fill-decrease-btn').addEventListener('click', () => {
+                const input = document.getElementById('fill-quantity-input');
+                const newValue = Math.max(1, parseInt(input.value) - 1);
+                input.value = newValue;
+                updateFillPreview();
+            });
+
+            document.getElementById('fill-increase-btn').addEventListener('click', () => {
+                const input = document.getElementById('fill-quantity-input');
+                const maxValue = getSelectedBinSpace();
+                const newValue = Math.min(maxValue, parseInt(input.value) + 1);
+                input.value = newValue;
+                updateFillPreview();
+            });
+
+            document.getElementById('take-quantity-input').addEventListener('input', updateTakePreview);
+            document.getElementById('fill-quantity-input').addEventListener('input', updateFillPreview);
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tabs-trigger').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Activate selected tab
+            const activeBtn = document.querySelector(`.tabs-trigger[data-tab="${tabName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            // Show selected tab content
+            const activeContent = document.getElementById(`${tabName}-tab`);
+            if (activeContent) {
+                activeContent.classList.add('active');
+            }
+
+            // Load content based on tab
+            switch(tabName) {
+                case 'materials':
+                    renderMaterials();
+                    break;
+                case 'dashboard':
+                    updateDashboard();
+                    break;
+                case 'history':
+                    updateHistoryDisplay();
+                    break;
+                case 'adgi':
+                    updateADGIDisplay();
+                    break;
+                case 'excel':
+                    updateExcelTab();
+                    break;
+            }
+        }
+
+        // Update all statistics
+        function updateAllStats() {
+            const totalMaterials = materials.length;
+            const availableMaterials = materials.filter(m => (m.bin1 + m.bin2 + m.bin3 + m.bin4) > 0).length;
+            const emptyMaterials = totalMaterials - availableMaterials;
+            const totalStock = materials.reduce((sum, m) => sum + m.bin1 + m.bin2 + m.bin3 + m.bin4, 0);
+            const takeHistory = history.filter(h => h.action === 'take');
+            const pendingCount = takeHistory.filter(h => h.adgiStatus === 'pending').length;
+            const doneCount = takeHistory.filter(h => h.adgiStatus === 'done').length;
+
+            // Update header stats
+            document.getElementById('available-count').textContent = availableMaterials;
+            document.getElementById('total-count').textContent = totalMaterials;
+            document.getElementById('history-count').textContent = history.length;
+            document.getElementById('adgi-count').textContent = takeHistory.length;
+            document.getElementById('materials-total').textContent = totalMaterials;
+
+            // Update summary
+            document.getElementById('summary-total').textContent = totalMaterials;
+            document.getElementById('summary-available').textContent = availableMaterials;
+            document.getElementById('summary-empty').textContent = emptyMaterials;
+            document.getElementById('summary-stock').textContent = totalStock.toLocaleString();
+
+            // Update ADGI stats
+            document.getElementById('adgi-total').textContent = takeHistory.length;
+            document.getElementById('adgi-total-takes').textContent = takeHistory.length;
+            document.getElementById('adgi-pending').textContent = pendingCount;
+            document.getElementById('adgi-done').textContent = doneCount;
+            
+            const today = new Date();
+            const todayTakes = takeHistory.filter(h => h.timestamp.toDateString() === today.toDateString()).length;
+            document.getElementById('adgi-today').textContent = todayTakes;
+
+            // Update Excel stats
+            document.getElementById('excel-materials').textContent = totalMaterials;
+            document.getElementById('excel-transactions').textContent = history.length;
+            document.getElementById('excel-total-stock').textContent = totalStock.toLocaleString();
+            document.getElementById('excel-auto-syncs').textContent = syncCount;
+        }
+
+        // Render materials - Same as React MaterialList
+        function renderMaterials() {
+            console.log('📝 Rendering materials grid...');
+            const grid = document.getElementById('materials-grid');
+            
+            const filteredMaterials = materials.filter(material => 
+                material.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                material.description.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filteredMaterials.length === 0) {
+                grid.innerHTML = `
+                    <div class="card p-8 text-center">
+                        <i data-lucide="package-2" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Tidak ada material ditemukan</h3>
+                        <p class="text-gray-500">Coba ubah kata kunci pencarian Anda</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            grid.innerHTML = filteredMaterials.map(material => {
+                const totalAvailable = material.bin1 + material.bin2 + material.bin3 + material.bin4;
+                const isAvailable = totalAvailable > 0;
+                const utilizationPercentage = Math.round((totalAvailable / (material.qtyPerBin * 4)) * 100);
+                
+                return `
+                    <div class="card p-6 material-card">
+                        <!-- Material Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="p-2 rounded-lg ${isAvailable ? 'bg-green-100' : 'bg-gray-100'}">
+                                    <i data-lucide="package-2" class="w-5 h-5 ${isAvailable ? 'text-green-600' : 'text-gray-400'}"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-mono text-sm font-medium text-gray-900">${material.id}</h3>
+                                    <p class="text-gray-600 text-sm mt-1">${material.description}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="badge badge-secondary text-xs">${material.qtyPerBin} qty/bin</span>
+                                <span class="badge ${isAvailable ? 'badge-default' : 'badge-secondary'} text-xs">Total: ${totalAvailable}</span>
+                                <span class="badge badge-outline text-xs">${utilizationPercentage}% Fill</span>
+                            </div>
+                        </div>
+
+                        <!-- Stock Overview -->
+                        <div class="mb-4">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i data-lucide="warehouse" class="w-4 h-4 text-gray-500"></i>
+                                <span class="text-sm text-gray-600">Stock Overview</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="progress-bar" style="width: ${utilizationPercentage}%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>${totalAvailable} / ${material.qtyPerBin * 4} Total Capacity</span>
+                                <span>${utilizationPercentage}% Utilized</span>
+                            </div>
+                        </div>
+
+                        <!-- Bin Status Grid -->
+                        <div class="grid grid-cols-4 gap-3 mb-4">
+                            ${generateBinStatusGrid(material)}
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center space-x-3 pt-4 border-t">
+                            <button 
+                                onclick="openTakeModal('${material.id}')" 
+                                ${!isAvailable ? 'disabled' : ''}
+                                class="btn ${isAvailable ? 'btn-green' : 'btn-outline'} flex-1 btn-hover"
+                                ${!isAvailable ? 'style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                            >
+                                <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                                ${isAvailable ? 'Ambil Material' : 'Stok Kosong'}
+                            </button>
+                            
+                            <button 
+                                onclick="openFillModal('${material.id}')"
+                                class="btn btn-outline flex-1 btn-hover"
+                            >
+                                <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
+                                Isi Material
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+            console.log(`✅ Rendered ${filteredMaterials.length} materials`);
+        }
+
+        function generateBinStatusGrid(material) {
+            return [1, 2, 3, 4].map(binNum => {
+                const binQty = material[`bin${binNum}`];
+                const binPercentage = Math.round((binQty / material.qtyPerBin) * 100);
+                let statusClass = 'bg-red-100 text-red-800';
+                let icon = 'alert-circle';
+                
+                if (binQty === 0) {
+                    statusClass = 'bg-red-100 text-red-800';
+                    icon = 'alert-circle';
+                } else if (binPercentage < 30) {
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                    icon = 'alert-circle';
+                } else if (binPercentage >= 90) {
+                    statusClass = 'bg-blue-100 text-blue-800';
+                    icon = 'check-circle';
+                } else {
+                    statusClass = 'bg-green-100 text-green-800';
+                    icon = 'check-circle';
+                }
+                
+                return `
+                    <div class="text-center">
+                        <div class="rounded-lg p-3 ${statusClass} mb-2">
+                            <i data-lucide="${icon}" class="w-4 h-4 mx-auto mb-1"></i>
+                            <div class="font-bold text-sm">${binQty}</div>
+                        </div>
+                        <div class="text-xs text-gray-600 mb-1">BIN ${binNum}</div>
+                        <div class="text-xs text-gray-500">${binPercentage}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ADGI Display Functions
+        function updateADGIDisplay() {
+            const searchTerm = document.getElementById('adgi-search').value.toLowerCase();
+            const filterStatus = document.getElementById('adgi-status-filter').value;
+            const sortBy = document.getElementById('adgi-sort').value;
+
+            const takeHistory = history.filter(entry => entry.action === 'take')
+                .map(entry => ({
+                    ...entry,
+                    adgiStatus: entry.adgiStatus || 'pending'
+                }));
+
+            // Group materials by materialId and consolidate quantities
+            const consolidatedMaterials = consolidateMaterialsByADGI(takeHistory);
+
+            const filteredHistory = consolidatedMaterials
+                .filter(material => {
+                    const matchesSearch = 
+                        material.materialId.toLowerCase().includes(searchTerm) ||
+                        material.materialDescription.toLowerCase().includes(searchTerm) ||
+                        material.user.toLowerCase().includes(searchTerm);
+                    
+                    const matchesFilter = filterStatus === 'all' || material.adgiStatus === filterStatus;
+                    
+                    return matchesSearch && matchesFilter;
+                })
+                .sort((a, b) => {
+                    if (sortBy === 'newest') {
+                        return b.lastTimestamp.getTime() - a.lastTimestamp.getTime();
+                    }
+                    return a.firstTimestamp.getTime() - b.firstTimestamp.getTime();
+                });
+
+            document.getElementById('adgi-filtered-count').textContent = filteredHistory.length;
+
+            const adgiList = document.getElementById('adgi-list');
+            
+            if (filteredHistory.length === 0) {
+                adgiList.innerHTML = `
+                    <div class="card p-8 text-center">
+                        <i data-lucide="package-2" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada pengambilan material</h3>
+                        <p class="text-gray-500">
+                            ${searchTerm || filterStatus !== 'all' 
+                                ? 'Tidak ada pengambilan yang sesuai dengan filter Anda'
+                                : 'Pengambilan material akan muncul di sini setelah ada transaksi'
+                            }
+                        </p>
+                    </div>
+                `;
+            } else {
+                adgiList.innerHTML = filteredHistory.map(material => {
+                    const formatDate = (date) => {
+                        return new Intl.DateTimeFormat('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        }).format(date);
+                    };
+
+                    const getStatusColor = (status) => {
+                        return status === 'done' 
+                            ? 'bg-green-100 text-green-800 border-green-200' 
+                            : 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    };
+
+                    const getStatusIcon = (status) => {
+                        return status === 'done' ? 'check-circle' : 'alert-circle';
+                    };
+
+                    const getStatusText = (status) => {
+                        return status === 'done' ? 'ADGI Done' : 'ADGI Pending';
+                    };
+
+                    const uniqueBins = [...new Set(material.binNumbers)].sort();
+                    const binText = uniqueBins.length === 1 
+                        ? `BIN ${uniqueBins[0]}` 
+                        : `${uniqueBins.length} BINs (${uniqueBins.join(', ')})`;
+
+                    const timeRange = material.firstTimestamp.getTime() === material.lastTimestamp.getTime() 
+                        ? formatDate(material.firstTimestamp)
+                        : `${formatDate(material.firstTimestamp)} - ${formatDate(material.lastTimestamp)}`;
+
+                    const transactionDetails = material.entries.length > 1 ? `
+                        <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                            <div class="text-xs text-gray-600 mb-2">Detail Pengambilan:</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${material.entries.map(entry => `
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-600">
+                                            BIN ${entry.binNumber} - ${formatDate(entry.timestamp)}
+                                        </span>
+                                        <span class="font-medium text-red-600">
+                                            -${entry.quantity} qty
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div class="card p-6 hover:shadow-md transition-shadow">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="bg-red-100 p-3 rounded-lg">
+                                        <i data-lucide="download" class="w-6 h-6 text-red-600"></i>
+                                    </div>
+                                    
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <h4 class="font-mono text-sm font-medium text-gray-900">
+                                                ${material.materialId}
+                                            </h4>
+                                            <div class="text-xs border ${getStatusColor(material.adgiStatus)} rounded-full px-2 py-1 flex items-center">
+                                                <i data-lucide="${getStatusIcon(material.adgiStatus)}" class="w-3 h-3 mr-1"></i>
+                                                ${getStatusText(material.adgiStatus)}
+                                            </div>
+                                            <div class="badge badge-outline text-xs">
+                                                ${binText}
+                                            </div>
+                                            ${material.entries.length > 1 ? `
+                                                <div class="badge badge-secondary text-xs">
+                                                    ${material.entries.length} transactions
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        
+                                        <p class="text-gray-600 text-sm mb-2">
+                                            ${material.materialDescription}
+                                        </p>
+                                        
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <div class="flex items-center space-x-1">
+                                                <i data-lucide="user" class="w-3 h-3"></i>
+                                                <span>${material.user}</span>
+                                            </div>
+                                            <div class="flex items-center space-x-1">
+                                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                                <span>${timeRange}</span>
+                                            </div>
+                                            ${material.entries.some(e => e.adgiUpdatedAt) ? `
+                                                <div class="flex items-center space-x-1">
+                                                    <i data-lucide="activity" class="w-3 h-3"></i>
+                                                    <span>Updated</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        
+                                        ${transactionDetails}
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-right">
+                                        <div class="text-2xl font-bold text-red-600">
+                                            -${material.totalQuantity}
+                                        </div>
+                                        <div class="text-xs text-gray-500">total qty</div>
+                                    </div>
+                                    
+                                    <!-- Status Toggle Buttons -->
+                                    <div class="flex space-x-2">
+                                        <button
+                                            onclick="updateADGIStatus('${material.materialId}', 'pending')"
+                                            class="btn ${material.adgiStatus === 'pending' ? 'btn-default' : 'btn-outline'} text-xs px-2 py-1"
+                                        >
+                                            <i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>
+                                            Pending
+                                        </button>
+                                        <button
+                                            onclick="updateADGIStatus('${material.materialId}', 'done')"
+                                            class="btn ${material.adgiStatus === 'done' ? 'btn-default' : 'btn-outline'} text-xs px-2 py-1"
+                                        >
+                                            <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                                            Done
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            lucide.createIcons();
+        }
+
+        // Consolidate materials by materialId for ADGI display
+        function consolidateMaterialsByADGI(takeHistory) {
+            const materialsMap = new Map();
+
+            takeHistory.forEach(entry => {
+                if (materialsMap.has(entry.materialId)) {
+                    const existing = materialsMap.get(entry.materialId);
+                    existing.totalQuantity += entry.quantity;
+                    existing.binNumbers.push(entry.binNumber);
+                    existing.entries.push(entry);
+                    
+                    // Update timestamps
+                    if (entry.timestamp < existing.firstTimestamp) {
+                        existing.firstTimestamp = entry.timestamp;
+                    }
+                    if (entry.timestamp > existing.lastTimestamp) {
+                        existing.lastTimestamp = entry.timestamp;
+                    }
+                    
+                    // Check if all entries for this material are done
+                    existing.allDone = existing.entries.every(e => e.adgiStatus === 'done');
+                    existing.adgiStatus = existing.allDone ? 'done' : 'pending';
+                } else {
+                    materialsMap.set(entry.materialId, {
+                        materialId: entry.materialId,
+                        materialDescription: entry.materialDescription,
+                        totalQuantity: entry.quantity,
+                        adgiStatus: entry.adgiStatus,
+                        firstTimestamp: entry.timestamp,
+                        lastTimestamp: entry.timestamp,
+                        binNumbers: [entry.binNumber],
+                        user: entry.user,
+                        entries: [entry],
+                        allDone: entry.adgiStatus === 'done'
+                    });
+                }
+            });
+
+            return Array.from(materialsMap.values());
+        }
+
+        function updateADGIStatus(materialId, status) {
+            // Find all entries for this material and update them
+            const materialEntries = history.filter(entry => 
+                entry.action === 'take' && entry.materialId === materialId
+            );
+
+            history = history.map(entry => {
+                if (entry.action === 'take' && entry.materialId === materialId) {
+                    return {
+                        ...entry,
+                        adgiStatus: status,
+                        adgiUpdatedAt: new Date(),
+                        adgiUpdatedBy: 'Current User'
+                    };
+                }
+                return entry;
+            });
+
+            updateAllStats();
+            updateADGIDisplay();
+            
+            const entriesCount = materialEntries.length;
+            const entryText = entriesCount === 1 ? 'entry' : 'entries';
+            showToast(`✅ Status ADGI untuk ${materialId} (${entriesCount} ${entryText}) diperbarui menjadi ${status === 'done' ? 'Done' : 'Pending'}`, 'success');
+        }
+
+        function resetADGIFilters() {
+            document.getElementById('adgi-search').value = '';
+            document.getElementById('adgi-status-filter').value = 'all';
+            document.getElementById('adgi-sort').value = 'newest';
+            updateADGIDisplay();
+        }
+
+        // Modal functions - Simplified with Confirmation
+        function openTakeModal(materialId) {
+            console.log('🔓 Opening take modal for:', materialId);
+            selectedMaterial = materials.find(m => m.id === materialId);
+            if (!selectedMaterial) {
+                showToast('Material tidak ditemukan', 'error');
+                return;
+            }
+
+            // Reset state
+            selectedBin = null;
+            document.getElementById('take-quantity-input').value = '1';
+
+            // Populate modal
+            document.getElementById('take-material-id').textContent = selectedMaterial.id;
+            document.getElementById('take-material-desc').textContent = selectedMaterial.description;
+            document.getElementById('take-material-capacity').textContent = selectedMaterial.qtyPerBin;
+
+            // Generate simplified bin selection
+            const binSelection = document.getElementById('take-bin-selection');
+            const bins = [
+                { number: 1, available: selectedMaterial.bin1, label: 'BIN 1' },
+                { number: 2, available: selectedMaterial.bin2, label: 'BIN 2' },
+                { number: 3, available: selectedMaterial.bin3, label: 'BIN 3' },
+                { number: 4, available: selectedMaterial.bin4, label: 'BIN 4' }
+            ];
+
+            const availableBins = bins.filter(bin => bin.available > 0);
+
+            if (availableBins.length === 0) {
+                binSelection.innerHTML = `
+                    <div class="col-span-2 text-center py-8">
+                        <i data-lucide="alert-triangle" class="w-12 h-12 mx-auto text-yellow-500 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Stok Habis</h3>
+                        <p class="text-gray-500">Semua bin untuk material ini sudah kosong</p>
+                    </div>
+                `;
+            } else {
+                binSelection.innerHTML = bins.map(bin => {
+                    const isAvailable = bin.available > 0;
+                    return `
+                        <button 
+                            onclick="selectTakeBin(${bin.number})" 
+                            ${!isAvailable ? 'disabled' : ''}
+                            class="p-4 rounded-lg border-2 transition-all text-left bin-option ${
+                                !isAvailable ? 'opacity-50 cursor-not-allowed border-gray-200' : 'hover:border-green-300 cursor-pointer border-gray-200'
+                            }" 
+                            data-bin="${bin.number}"
+                        >
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-medium text-gray-900">${bin.label}</span>
+                                <span class="badge ${isAvailable ? 'badge-default' : 'badge-secondary'} text-xs">
+                                    ${bin.available} tersedia
+                                </span>
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+            }
+
+            // Hide quantity section initially
+            document.getElementById('take-quantity-section').classList.add('hidden');
+            document.getElementById('confirm-take-btn').disabled = true;
+
+            // Show modal
+            document.getElementById('take-modal').classList.add('active');
+            
+            lucide.createIcons();
+            console.log('✅ Take modal opened successfully');
+        }
+
+        function selectTakeBin(binNumber) {
+            selectedBin = binNumber;
+
+            // Update UI
+            document.querySelectorAll('#take-bin-selection .bin-option').forEach(option => {
+                option.classList.remove('border-green-500', 'bg-green-50');
+                option.classList.add('border-gray-200');
+                const indicator = option.querySelector('.selected-indicator');
+                if (indicator) indicator.remove();
+            });
+
+            const selectedOption = document.querySelector(`#take-bin-selection .bin-option[data-bin="${binNumber}"]`);
+            if (selectedOption) {
+                selectedOption.classList.remove('border-gray-200');
+                selectedOption.classList.add('border-green-500', 'bg-green-50');
+                
+                selectedOption.innerHTML += '<div class="text-xs text-green-600 mt-1 selected-indicator flex items-center"><i data-lucide="download" class="w-3 h-3 mr-1"></i>✓ Dipilih untuk pengambilan</div>';
+                lucide.createIcons();
+            }
+
+            const available = selectedMaterial[`bin${binNumber}`];
+            document.getElementById('take-max-qty').textContent = available;
+
+            // Show quantity section
+            document.getElementById('take-quantity-section').classList.remove('hidden');
+            document.getElementById('take-quantity-input').value = '1';
+            updateTakePreview();
+            document.getElementById('confirm-take-btn').disabled = false;
+        }
+
+        function updateTakePreview() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('take-quantity-input').value) || 0;
+            const available = selectedMaterial[`bin${selectedBin}`];
+            const remaining = Math.max(0, available - quantity);
+
+            document.getElementById('take-preview-text').textContent = `BIN ${selectedBin}: ${remaining} tersisa`;
+        }
+
+        function setTakeQuantityToMax() {
+            if (!selectedMaterial || !selectedBin) return;
+            const available = selectedMaterial[`bin${selectedBin}`];
+            document.getElementById('take-quantity-input').value = available;
+            updateTakePreview();
+        }
+
+        function getSelectedBinAvailable() {
+            if (!selectedMaterial || !selectedBin) return 0;
+            return selectedMaterial[`bin${selectedBin}`];
+        }
+
+        function showTakeConfirmation() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('take-quantity-input').value) || 0;
+            if (quantity <= 0) {
+                showToast('Masukkan jumlah yang valid', 'error');
+                return;
+            }
+
+            // Set confirmation details
+            document.getElementById('confirmation-icon').setAttribute('data-lucide', 'download');
+            document.getElementById('confirmation-title').textContent = 'Konfirmasi Pengambilan Material';
+            document.getElementById('confirmation-message').textContent = 
+                `Apakah Anda yakin ingin mengambil ${quantity} ${selectedMaterial.description} dari BIN ${selectedBin}?`;
+            document.getElementById('confirmation-confirm-btn').textContent = 'Ya, Ambil';
+            document.getElementById('confirmation-confirm-btn').className = 'btn btn-green flex-1';
+            
+            pendingConfirmation = () => confirmTakeMaterial();
+            
+            lucide.createIcons();
+            document.getElementById('confirmation-modal').classList.add('active');
+        }
+
+        function confirmTakeMaterial() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('take-quantity-input').value) || 0;
+            const binKey = `bin${selectedBin}`;
+            const currentBinValue = selectedMaterial[binKey];
+            
+            if (currentBinValue < quantity) {
+                showToast(`❌ Stok tidak mencukupi. Tersedia: ${currentBinValue}`, 'error');
+                return;
+            }
+
+            console.log('✅ Confirming take material:', {
+                materialId: selectedMaterial.id,
+                binNumber: selectedBin,
+                quantity: quantity
+            });
+
+            // Update material data
+            selectedMaterial[binKey] = Math.max(0, selectedMaterial[binKey] - quantity);
+
+            // Add to history with ADGI status
+            const historyEntry = {
+                id: `take-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                materialId: selectedMaterial.id,
+                materialDescription: selectedMaterial.description,
+                action: 'take',
+                binNumber: selectedBin,
+                quantity: quantity,
+                timestamp: new Date(),
+                user: 'Current User',
+                adgiStatus: 'pending', // New take actions start as pending
+                adgiUpdatedAt: new Date(),
+                adgiUpdatedBy: 'System'
+            };
+            history.unshift(historyEntry);
+
+            // Update UI
+            updateAllStats();
+            renderMaterials();
+            closeTakeModal();
+
+            // Show success message
+            showToast(`✅ Berhasil mengambil ${quantity} ${selectedMaterial.description} dari BIN ${selectedBin}`, 'success');
+
+            // Auto-sync if enabled
+            if (autoExportEnabled) {
+                performAutoSync();
+            }
+        }
+
+        function closeTakeModal() {
+            document.getElementById('take-modal').classList.remove('active');
+            selectedMaterial = null;
+            selectedBin = null;
+        }
+
+        // Fill Modal Functions
+        function openFillModal(materialId) {
+            console.log('🔓 Opening fill modal for:', materialId);
+            selectedMaterial = materials.find(m => m.id === materialId);
+            if (!selectedMaterial) {
+                showToast('Material tidak ditemukan', 'error');
+                return;
+            }
+
+            // Reset state
+            selectedBin = null;
+            document.getElementById('fill-quantity-input').value = '1';
+
+            // Populate modal
+            document.getElementById('fill-material-id').textContent = selectedMaterial.id;
+            document.getElementById('fill-material-desc').textContent = selectedMaterial.description;
+            document.getElementById('fill-material-capacity').textContent = selectedMaterial.qtyPerBin;
+
+            // Generate bin selection
+            const binSelection = document.getElementById('fill-bin-selection');
+            const bins = [
+                { number: 1, current: selectedMaterial.bin1, label: 'BIN 1' },
+                { number: 2, current: selectedMaterial.bin2, label: 'BIN 2' },
+                { number: 3, current: selectedMaterial.bin3, label: 'BIN 3' },
+                { number: 4, current: selectedMaterial.bin4, label: 'BIN 4' }
+            ];
+
+            binSelection.innerHTML = bins.map(bin => {
+                const isFull = bin.current >= selectedMaterial.qtyPerBin;
+                const fillPercentage = (bin.current / selectedMaterial.qtyPerBin) * 100;
+                const spaceAvailable = selectedMaterial.qtyPerBin - bin.current;
+                
+                return `
+                    <button 
+                        onclick="selectFillBin(${bin.number})" 
+                        ${isFull ? 'disabled' : ''}
+                        class="p-4 rounded-lg border-2 transition-all text-left bin-option ${
+                            isFull ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-300 cursor-pointer'
+                        } border-gray-200" 
+                        data-bin="${bin.number}"
+                    >
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-gray-900">${bin.label}</span>
+                            <span class="badge ${isFull ? 'badge-error' : 'badge-secondary'} text-xs">
+                                ${bin.current}/${selectedMaterial.qtyPerBin}
+                            </span>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                            <div class="${isFull ? 'bg-red-500' : 'bg-gray-400'} h-2 rounded-full transition-all" style="width: ${Math.min(fillPercentage, 100)}%"></div>
+                        </div>
+                        
+                        <div class="text-xs text-gray-500">
+                            ${isFull ? 'Bin Penuh' : `${spaceAvailable} ruang kosong`}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            // Hide quantity section initially
+            document.getElementById('fill-quantity-section').classList.add('hidden');
+            document.getElementById('fill-full-warning').classList.add('hidden');
+            document.getElementById('confirm-fill-btn').disabled = true;
+
+            // Show modal
+            document.getElementById('fill-modal').classList.add('active');
+            
+            lucide.createIcons();
+        }
+
+        function selectFillBin(binNumber) {
+            selectedBin = binNumber;
+
+            // Update UI
+            document.querySelectorAll('#fill-bin-selection .bin-option').forEach(option => {
+                option.classList.remove('border-blue-500', 'bg-blue-50');
+                option.classList.add('border-gray-200');
+                const indicator = option.querySelector('.selected-indicator');
+                if (indicator) indicator.remove();
+            });
+
+            const selectedOption = document.querySelector(`#fill-bin-selection .bin-option[data-bin="${binNumber}"]`);
+            if (selectedOption) {
+                selectedOption.classList.remove('border-gray-200');
+                selectedOption.classList.add('border-blue-500', 'bg-blue-50');
+                
+                selectedOption.innerHTML += '<div class="text-xs text-blue-600 mt-1 selected-indicator flex items-center"><i data-lucide="upload" class="w-3 h-3 mr-1"></i>✓ Dipilih untuk pengisian</div>';
+                lucide.createIcons();
+            }
+
+            const availableSpace = selectedMaterial.qtyPerBin - selectedMaterial[`bin${binNumber}`];
+            document.getElementById('fill-max-qty').textContent = availableSpace;
+            
+            if (availableSpace > 0) {
+                // Show quantity section
+                document.getElementById('fill-quantity-section').classList.remove('hidden');
+                document.getElementById('fill-full-warning').classList.add('hidden');
+                document.getElementById('fill-quantity-input').value = '1';
+                updateFillPreview();
+                document.getElementById('confirm-fill-btn').disabled = false;
+            } else {
+                // Bin is full
+                document.getElementById('fill-quantity-section').classList.add('hidden');
+                document.getElementById('fill-full-warning').classList.remove('hidden');
+                document.getElementById('confirm-fill-btn').disabled = true;
+            }
+        }
+
+        function updateFillPreview() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('fill-quantity-input').value) || 0;
+            const current = selectedMaterial[`bin${selectedBin}`];
+            const afterFill = current + quantity;
+            const percentage = Math.round((afterFill / selectedMaterial.qtyPerBin) * 100);
+
+            document.getElementById('fill-preview-text').textContent = `BIN ${selectedBin}: ${afterFill}/${selectedMaterial.qtyPerBin} (${percentage}%)`;
+        }
+
+        function setFillQuantityToMax() {
+            if (!selectedMaterial || !selectedBin) return;
+            const current = selectedMaterial[`bin${selectedBin}`];
+            const availableSpace = selectedMaterial.qtyPerBin - current;
+            document.getElementById('fill-quantity-input').value = availableSpace;
+            updateFillPreview();
+        }
+
+        function getSelectedBinSpace() {
+            if (!selectedMaterial || !selectedBin) return 0;
+            const current = selectedMaterial[`bin${selectedBin}`];
+            return selectedMaterial.qtyPerBin - current;
+        }
+
+        function showFillConfirmation() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('fill-quantity-input').value) || 0;
+            if (quantity <= 0) {
+                showToast('Masukkan jumlah yang valid', 'error');
+                return;
+            }
+
+            // Set confirmation details
+            document.getElementById('confirmation-icon').setAttribute('data-lucide', 'upload');
+            document.getElementById('confirmation-title').textContent = 'Konfirmasi Pengisian Material';
+            document.getElementById('confirmation-message').textContent = 
+                `Apakah Anda yakin ingin mengisi ${quantity} ${selectedMaterial.description} ke BIN ${selectedBin}?`;
+            document.getElementById('confirmation-confirm-btn').textContent = 'Ya, Isi';
+            document.getElementById('confirmation-confirm-btn').className = 'btn btn-blue flex-1';
+            
+            pendingConfirmation = () => confirmFillMaterial();
+            
+            lucide.createIcons();
+            document.getElementById('confirmation-modal').classList.add('active');
+        }
+
+        function confirmFillMaterial() {
+            if (!selectedMaterial || !selectedBin) return;
+
+            const quantity = parseInt(document.getElementById('fill-quantity-input').value) || 0;
+            const current = selectedMaterial[`bin${selectedBin}`];
+            
+            if (current + quantity > selectedMaterial.qtyPerBin) {
+                showToast('❌ Kapasitas bin tidak mencukupi', 'error');
+                return;
+            }
+
+            // Update material data
+            const binKey = `bin${selectedBin}`;
+            selectedMaterial[binKey] = current + quantity;
+
+            // Add to history (fill actions don't need ADGI status)
+            const historyEntry = {
+                id: `fill-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                materialId: selectedMaterial.id,
+                materialDescription: selectedMaterial.description,
+                action: 'fill',
+                binNumber: selectedBin,
+                quantity: quantity,
+                timestamp: new Date(),
+                user: 'Current User'
+            };
+            history.unshift(historyEntry);
+
+            // Update UI
+            updateAllStats();
+            renderMaterials();
+            closeFillModal();
+
+            // Show success message
+            showToast(`✅ Berhasil mengisi ${quantity} ${selectedMaterial.description} ke BIN ${selectedBin}`, 'success');
+
+            // Auto-sync if enabled
+            if (autoExportEnabled) {
+                performAutoSync();
+            }
+        }
+
+        function closeFillModal() {
+            document.getElementById('fill-modal').classList.remove('active');
+            selectedMaterial = null;
+            selectedBin = null;
+        }
+
+        // Confirmation Modal Functions
+        function closeConfirmationModal() {
+            document.getElementById('confirmation-modal').classList.remove('active');
+            pendingConfirmation = null;
+        }
+
+        function executeConfirmedAction() {
+            if (pendingConfirmation) {
+                pendingConfirmation();
+                closeConfirmationModal();
+            }
+        }
+
+        // Excel functions - Auto-sync without download
+        function performAutoSync() {
+            if (!autoExportEnabled) return;
+            
+            try {
+                // Simulate auto-sync operation
+                syncCount++;
+                lastExportTime = new Date();
+                
+                // Update sync badge
+                const syncBadge = document.getElementById('sync-badge');
+                const syncText = document.getElementById('sync-text');
+                syncBadge.classList.remove('hidden');
+                syncText.textContent = `Sync: ${lastExportTime.toLocaleTimeString('id-ID')}`;
+                
+                // Update Excel tab stats
+                document.getElementById('excel-auto-syncs').textContent = syncCount;
+                document.getElementById('last-sync-time').textContent = lastExportTime.toLocaleString('id-ID');
+                document.getElementById('last-sync-info').classList.remove('hidden');
+                
+                showToast(`🔄 Data tersinkron otomatis`, 'success');
+            } catch (error) {
+                console.error('Auto-sync error:', error);
+                showToast('❌ Gagal sinkronisasi otomatis', 'error');
+            }
+        }
+
+        function exportCompleteData() {
+            try {
+                const workbook = XLSX.utils.book_new();
+                
+                const materialsData = materials.map(material => ({
+                    'ID SAP': material.id,
+                    'Deskripsi': material.description,
+                    'Kapasitas Per Bin': material.qtyPerBin,
+                    'BIN 1': material.bin1,
+                    'BIN 2': material.bin2,
+                    'BIN 3': material.bin3,
+                    'BIN 4': material.bin4,
+                    'Total Stok': material.bin1 + material.bin2 + material.bin3 + material.bin4,
+                    'Status': (material.bin1 + material.bin2 + material.bin3 + material.bin4) > 0 ? 'Tersedia' : 'Kosong',
+                    'Terakhir Update': new Date().toLocaleString('id-ID')
+                }));
+
+                const historyData = history.map(entry => ({
+                    'Waktu': entry.timestamp.toLocaleString('id-ID'),
+                    'ID Material': entry.materialId,
+                    'Deskripsi': entry.materialDescription,
+                    'Aktivitas': entry.action === 'take' ? 'Pengambilan' : 'Pengisian',
+                    'Bin': `BIN ${entry.binNumber}`,
+                    'Jumlah': entry.quantity,
+                    'User': entry.user,
+                    'ADGI Status': entry.adgiStatus || (entry.action === 'take' ? 'pending' : '-'),
+                    'ID Transaksi': entry.id
+                }));
+
+                const materialsSheet = XLSX.utils.json_to_sheet(materialsData);
+                const historySheet = XLSX.utils.json_to_sheet(historyData);
+
+                XLSX.utils.book_append_sheet(workbook, materialsSheet, 'Material Stock');
+                XLSX.utils.book_append_sheet(workbook, historySheet, 'History');
+
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                const filename = `Material_Management_Complete_${timestamp}.xlsx`;
+
+                XLSX.writeFile(workbook, filename);
+                
+                showToast(`📄 Data lengkap berhasil diekspor ke ${filename}`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('❌ Gagal mengekspor data lengkap', 'error');
+                return false;
+            }
+        }
+
+        function exportLiveSnapshot() {
+            try {
+                const workbook = XLSX.utils.book_new();
+                
+                const materialsData = materials.map(material => ({
+                    'ID SAP': material.id,
+                    'Deskripsi': material.description,
+                    'BIN 1': material.bin1,
+                    'BIN 2': material.bin2,
+                    'BIN 3': material.bin3,
+                    'BIN 4': material.bin4,
+                    'Total': material.bin1 + material.bin2 + material.bin3 + material.bin4,
+                    'Status': (material.bin1 + material.bin2 + material.bin3 + material.bin4) > 0 ? 'OK' : 'EMPTY',
+                    'Last Update': new Date().toLocaleString('id-ID')
+                }));
+
+                const recentHistory = history.slice(0, 50).map(entry => ({
+                    'Time': entry.timestamp.toLocaleString('id-ID'),
+                    'Material': entry.materialId,
+                    'Action': entry.action === 'take' ? 'TAKE' : 'FILL',
+                    'Bin': entry.binNumber,
+                    'Qty': entry.quantity,
+                    'User': entry.user,
+                    'ADGI': entry.adgiStatus || (entry.action === 'take' ? 'pending' : '-')
+                }));
+
+                const materialsSheet = XLSX.utils.json_to_sheet(materialsData);
+                const historySheet = XLSX.utils.json_to_sheet(recentHistory);
+
+                XLSX.utils.book_append_sheet(workbook, materialsSheet, 'Live Stock');
+                XLSX.utils.book_append_sheet(workbook, historySheet, 'Recent Activity');
+
+                XLSX.writeFile(workbook, 'Material_Management_Live_Snapshot.xlsx');
+                
+                showToast('📊 Live snapshot berhasil diekspor', 'success');
+                return true;
+            } catch (error) {
+                console.error('Live export error:', error);
+                showToast('❌ Gagal mengekspor live snapshot', 'error');
+                return false;
+            }
+        }
+
+        function createExcelTemplate() {
+            try {
+                const workbook = XLSX.utils.book_new();
+                
+                // Header Information
+                const headerData = [
+                    ['🏭 SISTEM MANAJEMEN MATERIAL SUPERMARKET', '', '', '', '', '', '', '', '', ''],
+                    ['📊 Template Real-time Update & Monitoring', '', '', '', '', '', '', '', '', ''],
+                    ['⏰ Generated:', new Date().toLocaleString('id-ID'), '', '', '', '', '', '', '', ''],
+                    ['🔄 Auto-Sync Status: ' + (autoExportEnabled ? 'ACTIVE' : 'INACTIVE'), '', '', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', '', '', ''],
+                    ['ID SAP', 'DESKRIPSI MATERIAL', 'KAPASITAS/BIN', 'BIN 1', 'BIN 2', 'BIN 3', 'BIN 4', 'TOTAL STOK', 'STATUS', 'LAST UPDATE']
+                ];
+                
+                const materialsData = materials.map((material) => [
+                    material.id,
+                    material.description,
+                    material.qtyPerBin,
+                    material.bin1,
+                    material.bin2,
+                    material.bin3,
+                    material.bin4,
+                    material.bin1 + material.bin2 + material.bin3 + material.bin4,
+                    (material.bin1 + material.bin2 + material.bin3 + material.bin4) > 0 ? 'TERSEDIA' : 'KOSONG',
+                    new Date().toLocaleString('id-ID')
+                ]);
+                
+                const allData = [...headerData, ...materialsData];
+                const worksheet = XLSX.utils.aoa_to_sheet(allData);
+                
+                const columnWidths = [
+                    { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, 
+                    { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }
+                ];
+                worksheet['!cols'] = columnWidths;
+                
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Material Template');
+                
+                const filename = 'Material_Management_Template.xlsx';
+                XLSX.writeFile(workbook, filename);
+                
+                showToast(`📊 Template Excel berhasil dibuat: ${filename}`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Template creation error:', error);
+                showToast('❌ Gagal membuat template Excel', 'error');
+                return false;
+            }
+        }
+
+        function importFromExcel() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target?.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        const materialSheetName = workbook.SheetNames.find(name => 
+                            name.toLowerCase().includes('material') || name.toLowerCase().includes('stock') || name.toLowerCase().includes('template')
+                        );
+                        
+                        if (materialSheetName) {
+                            const worksheet = workbook.Sheets[materialSheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                            
+                            const importedMaterials = jsonData.map((row) => ({
+                                id: row['ID SAP'] || '',
+                                description: row['DESKRIPSI MATERIAL'] || row['Deskripsi'] || '',
+                                qtyPerBin: row['KAPASITAS/BIN'] || row['Kapasitas Per Bin'] || 0,
+                                bin1: row['BIN 1'] || 0,
+                                bin2: row['BIN 2'] || 0,
+                                bin3: row['BIN 3'] || 0,
+                                bin4: row['BIN 4'] || 0
+                            })).filter(material => material.id);
+                            
+                            if (importedMaterials.length > 0) {
+                                materials = importedMaterials;
+                                updateAllStats();
+                                renderMaterials();
+                                showToast(`✅ ${importedMaterials.length} material berhasil diimpor dari Excel`, 'success');
+                                
+                                // Trigger auto-sync after import if enabled
+                                if (autoExportEnabled) {
+                                    setTimeout(() => performAutoSync(), 1000);
+                                }
+                            } else {
+                                showToast('⚠️ Tidak ada data material yang valid untuk diimpor', 'warning');
+                            }
+                        } else {
+                            showToast('❌ Sheet material tidak ditemukan dalam file Excel', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        showToast('❌ Gagal mengimpor data dari Excel', 'error');
+                    }
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }
+            event.target.value = '';
+        }
+
+        function toggleAutoSync() {
+            autoExportEnabled = !autoExportEnabled;
+            const btn = document.getElementById('auto-sync-btn');
+            const badge = document.getElementById('excel-auto-sync-badge');
+            const status = document.getElementById('auto-sync-status');
+            
+            if (autoExportEnabled) {
+                btn.className = 'btn btn-default btn-hover';
+                btn.innerHTML = '<i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i>Auto-Sync ON';
+                badge.className = 'badge badge-success px-3 py-1';
+                badge.innerHTML = '<i data-lucide="zap" class="w-3 h-3 mr-1"></i>Auto-Sync ON';
+                status.textContent = 'Enabled';
+                document.getElementById('auto-sync-toggle').checked = true;
+            } else {
+                btn.className = 'btn btn-outline btn-hover';
+                btn.innerHTML = '<i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i>Auto-Sync OFF';
+                badge.className = 'badge badge-secondary px-3 py-1';
+                badge.innerHTML = '<i data-lucide="zap" class="w-3 h-3 mr-1"></i>Auto-Sync OFF';
+                status.textContent = 'Disabled';
+                document.getElementById('auto-sync-toggle').checked = false;
+            }
+            
+            // Update toggle switch appearance
+            updateToggleSwitch();
+            
+            lucide.createIcons();
+            showToast(`Auto-sync Excel ${autoExportEnabled ? 'diaktifkan' : 'dimatikan'}`, 'success');
+        }
+
+        function toggleAutoSyncSwitch() {
+            toggleAutoSync();
+        }
+
+        function updateToggleSwitch() {
+            const toggle = document.getElementById('auto-sync-toggle');
+            const dot = document.querySelector('.dot');
+            const track = document.querySelector('.block');
+            
+            if (toggle.checked) {
+                dot.style.transform = 'translateX(20px)';
+                track.style.backgroundColor = '#059669';
+            } else {
+                dot.style.transform = 'translateX(0)';
+                track.style.backgroundColor = '#6b7280';
+            }
+        }
+
+        function updateExcelTab() {
+            updateAllStats();
+            
+            // Update last sync display
+            if (lastExportTime) {
+                document.getElementById('last-sync-time').textContent = lastExportTime.toLocaleString('id-ID');
+                document.getElementById('last-sync-info').classList.remove('hidden');
+            }
+        }
+
+        // Toast system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            console.log('📊 Updating dashboard...');
+            
+            const totalMaterials = materials.length;
+            const availableMaterials = materials.filter(m => (m.bin1 + m.bin2 + m.bin3 + m.bin4) > 0).length;
+            const emptyMaterials = totalMaterials - availableMaterials;
+            const totalStock = materials.reduce((sum, m) => sum + m.bin1 + m.bin2 + m.bin3 + m.bin4, 0);
+            const totalCapacity = materials.reduce((sum, m) => sum + (m.qtyPerBin * 4), 0);
+            const utilizationPercentage = totalCapacity > 0 ? Math.round((totalStock / totalCapacity) * 100) : 0;
+
+            // Update key metrics
+            document.getElementById('dashboard-total-materials').textContent = totalMaterials;
+            document.getElementById('dashboard-available-materials').textContent = availableMaterials;
+            document.getElementById('dashboard-empty-materials').textContent = emptyMaterials;
+            document.getElementById('dashboard-total-stock').textContent = totalStock.toLocaleString();
+            document.getElementById('dashboard-total-capacity').textContent = totalCapacity.toLocaleString();
+            document.getElementById('dashboard-utilization').textContent = utilizationPercentage + '%';
+            document.getElementById('dashboard-total-activities').textContent = history.length;
+            document.getElementById('dashboard-utilization-bar').style.width = utilizationPercentage + '%';
+
+            // Update utilization color
+            const utilizationBg = document.getElementById('dashboard-utilization-icon-bg');
+            const utilizationIcon = document.getElementById('dashboard-utilization-icon');
+            if (utilizationPercentage >= 80) {
+                utilizationBg.className = 'p-3 rounded-lg bg-red-100';
+                utilizationIcon.className = 'w-6 h-6 text-red-600';
+            } else if (utilizationPercentage >= 60) {
+                utilizationBg.className = 'p-3 rounded-lg bg-yellow-100';
+                utilizationIcon.className = 'w-6 h-6 text-yellow-600';
+            } else if (utilizationPercentage >= 40) {
+                utilizationBg.className = 'p-3 rounded-lg bg-blue-100';
+                utilizationIcon.className = 'w-6 h-6 text-blue-600';
+            } else {
+                utilizationBg.className = 'p-3 rounded-lg bg-green-100';
+                utilizationIcon.className = 'w-6 h-6 text-green-600';
+            }
+
+            // Activity statistics
+            const today = new Date();
+            const todayActivities = history.filter(h => h.timestamp.toDateString() === today.toDateString());
+            const todayTaken = todayActivities.filter(h => h.action === 'take').reduce((sum, h) => sum + h.quantity, 0);
+            const todayFilled = todayActivities.filter(h => h.action === 'fill').reduce((sum, h) => sum + h.quantity, 0);
+            const netChange = todayFilled - todayTaken;
+
+            document.getElementById('dashboard-today-activities').textContent = todayActivities.length;
+            document.getElementById('dashboard-today-filled').textContent = todayFilled.toLocaleString();
+            document.getElementById('dashboard-today-taken').textContent = todayTaken.toLocaleString();
+            
+            const netChangeElement = document.getElementById('dashboard-net-change');
+            netChangeElement.textContent = (netChange >= 0 ? '+' : '') + netChange.toLocaleString();
+            netChangeElement.className = `font-medium ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            // Bin statistics
+            updateDashboardBinStats();
+            
+            // Critical materials
+            updateDashboardCriticalMaterials();
+            
+            // Most active materials
+            updateDashboardActiveMaterials();
+            
+            // Excel status
+            updateDashboardExcelStatus();
+
+            lucide.createIcons();
+        }
+
+        function updateDashboardBinStats() {
+            const binStatsContainer = document.getElementById('dashboard-bin-stats');
+            const binStats = [1, 2, 3, 4].map(binNum => {
+                const binStock = materials.reduce((sum, m) => sum + m[`bin${binNum}`], 0);
+                const binCapacity = materials.reduce((sum, m) => sum + m.qtyPerBin, 0);
+                const binUtilization = binCapacity > 0 ? Math.round((binStock / binCapacity) * 100) : 0;
+                const activeMaterials = materials.filter(m => m[`bin${binNum}`] > 0).length;
+                
+                return { binNumber: binNum, stock: binStock, capacity: binCapacity, utilization: binUtilization, activeMaterials };
+            });
+
+            binStatsContainer.innerHTML = binStats.map(bin => `
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium text-gray-900">BIN ${bin.binNumber}</h4>
+                        <div class="badge badge-outline text-xs">${bin.utilization}%</div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Stock:</span>
+                            <span class="font-medium">${bin.stock.toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Active Materials:</span>
+                            <span class="font-medium">${bin.activeMaterials}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="progress-bar h-2 rounded-full" style="width: ${bin.utilization}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateDashboardCriticalMaterials() {
+            const criticalContainer = document.getElementById('dashboard-critical-materials');
+            const criticalMaterials = materials.filter(m => {
+                const totalStock = m.bin1 + m.bin2 + m.bin3 + m.bin4;
+                const totalCapacity = m.qtyPerBin * 4;
+                return totalStock < (totalCapacity * 0.2); // Less than 20% capacity
+            });
+
+            document.getElementById('dashboard-critical-count').textContent = criticalMaterials.length + ' items';
+
+            if (criticalMaterials.length === 0) {
+                criticalContainer.innerHTML = `
+                    <div class="flex items-center space-x-2 text-green-600 p-3 bg-green-50 rounded-lg">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        <span class="text-sm">All materials have adequate stock levels</span>
+                    </div>
+                `;
+            } else {
+                criticalContainer.innerHTML = criticalMaterials.map(material => {
+                    const totalStock = material.bin1 + material.bin2 + material.bin3 + material.bin4;
+                    const totalCapacity = material.qtyPerBin * 4;
+                    const percentage = Math.round((totalStock / totalCapacity) * 100);
+                    
+                    return `
+                        <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="font-mono text-sm font-medium text-gray-900">${material.id}</div>
+                                <div class="badge badge-outline text-xs text-yellow-700 border-yellow-300">${percentage}%</div>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-2">
+                                ${material.description.substring(0, 40)}${material.description.length > 40 ? '...' : ''}
+                            </div>
+                            <div class="text-xs text-gray-500">Stock: ${totalStock}/${totalCapacity}</div>
+                            <div class="w-full bg-gray-200 rounded-full h-1 mt-1">
+                                <div class="progress-bar h-1 rounded-full" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function updateDashboardActiveMaterials() {
+            const activeContainer = document.getElementById('dashboard-most-active-materials');
+            const materialActivityCount = materials.map(material => {
+                const activityCount = history.filter(h => h.materialId === material.id).length;
+                return { material, activityCount };
+            }).filter(item => item.activityCount > 0)
+              .sort((a, b) => b.activityCount - a.activityCount)
+              .slice(0, 5);
+
+            document.getElementById('dashboard-active-materials-count').textContent = 'Top ' + materialActivityCount.length;
+
+            if (materialActivityCount.length === 0) {
+                activeContainer.innerHTML = `
+                    <div class="flex items-center space-x-2 text-gray-500 p-3 bg-gray-50 rounded-lg">
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                        <span class="text-sm">No activity data yet - start using materials to see activity rankings</span>
+                    </div>
+                `;
+            } else {
+                activeContainer.innerHTML = materialActivityCount.map((item, index) => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:shadow-sm transition-shadow">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                ${index + 1}
+                            </div>
+                            <div>
+                                <div class="font-mono text-sm font-medium text-gray-900">${item.material.id}</div>
+                                <div class="text-xs text-gray-600">
+                                    ${item.material.description.length > 50 
+                                        ? item.material.description.substring(0, 50) + '...'
+                                        : item.material.description
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-gray-900">${item.activityCount}</div>
+                            <div class="text-xs text-gray-500">${item.activityCount === 1 ? 'activity' : 'activities'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateDashboardExcelStatus() {
+            const statusBadge = document.getElementById('dashboard-excel-status-badge');
+            const lastSyncElement = document.getElementById('dashboard-excel-last-sync');
+            
+            statusBadge.textContent = autoExportEnabled ? 'Auto-Sync ON' : 'Auto-Sync OFF';
+            statusBadge.className = autoExportEnabled ? 'badge badge-default mb-2' : 'badge badge-secondary mb-2';
+            
+            if (lastExportTime) {
+                lastSyncElement.textContent = 'Last sync: ' + lastExportTime.toLocaleTimeString('id-ID');
+            }
+        }
+
+        function startClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('id-ID');
+                const clockElement = document.getElementById('dashboard-current-time');
+                if (clockElement) {
+                    clockElement.textContent = timeString;
+                }
+            }
+            
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // History Functions
+        function updateHistoryDisplay() {
+            console.log('📋 Updating history display...');
+            
+            const searchTerm = document.getElementById('history-search').value.toLowerCase();
+            const filterAction = document.getElementById('history-action-filter').value;
+            const sortBy = document.getElementById('history-sort').value;
+
+            const filteredHistory = history
+                .filter(entry => {
+                    const matchesSearch = 
+                        entry.materialId.toLowerCase().includes(searchTerm) ||
+                        entry.materialDescription.toLowerCase().includes(searchTerm) ||
+                        entry.user.toLowerCase().includes(searchTerm);
+                    
+                    const matchesFilter = filterAction === 'all' || entry.action === filterAction;
+                    
+                    return matchesSearch && matchesFilter;
+                })
+                .sort((a, b) => {
+                    if (sortBy === 'newest') {
+                        return b.timestamp.getTime() - a.timestamp.getTime();
+                    }
+                    return a.timestamp.getTime() - b.timestamp.getTime();
+                });
+
+            // Update stats
+            const totalTaken = history.filter(h => h.action === 'take').reduce((sum, h) => sum + h.quantity, 0);
+            const totalFilled = history.filter(h => h.action === 'fill').reduce((sum, h) => sum + h.quantity, 0);
+            const today = new Date();
+            const todayEntries = history.filter(h => h.timestamp.toDateString() === today.toDateString()).length;
+
+            document.getElementById('history-total-display').textContent = history.length;
+            document.getElementById('history-total-activities').textContent = history.length;
+            document.getElementById('history-total-filled').textContent = totalFilled.toLocaleString();
+            document.getElementById('history-total-taken').textContent = totalTaken.toLocaleString();
+            document.getElementById('history-today-entries').textContent = todayEntries;
+            document.getElementById('history-filtered-count').textContent = filteredHistory.length;
+
+            // Update history list
+            const historyList = document.getElementById('history-list');
+            
+            if (filteredHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="card p-8 text-center">
+                        <i data-lucide="package-2" class="w-12 h-12 mx-auto text-gray-400 mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada histori</h3>
+                        <p class="text-gray-500">
+                            ${searchTerm || filterAction !== 'all' 
+                                ? 'Tidak ada aktivitas yang sesuai dengan filter Anda'
+                                : 'Aktivitas pengambilan dan pengisian material akan muncul di sini'
+                            }
+                        </p>
+                    </div>
+                `;
+                document.getElementById('history-summary').classList.add('hidden');
+            } else {
+                historyList.innerHTML = filteredHistory.map(entry => {
+                    const formatDate = (date) => {
+                        return new Intl.DateTimeFormat('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        }).format(date);
+                    };
+
+                    const actionIcon = entry.action === 'take' ? 'download' : 'upload';
+                    const actionColor = entry.action === 'take' ? 'text-red-600' : 'text-green-600';
+                    const actionBg = entry.action === 'take' ? 'bg-red-100' : 'bg-green-100';
+                    const actionBadgeColor = entry.action === 'take' 
+                        ? 'bg-red-100 text-red-800 border-red-200' 
+                        : 'bg-green-100 text-green-800 border-green-200';
+                    const actionText = entry.action === 'take' ? 'Diambil' : 'Diisi';
+                    const quantitySign = entry.action === 'take' ? '-' : '+';
+                    const quantityColor = entry.action === 'take' ? 'text-red-600' : 'text-green-600';
+
+                    return `
+                        <div class="card p-6 hover:shadow-md transition-shadow">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="${actionBg} p-3 rounded-lg">
+                                        <i data-lucide="${actionIcon}" class="w-6 h-6 ${actionColor}"></i>
+                                    </div>
+                                    
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <h4 class="font-mono text-sm font-medium text-gray-900">${entry.materialId}</h4>
+                                            <div class="text-xs border ${actionBadgeColor} rounded-full px-2 py-1">${actionText}</div>
+                                            <div class="badge badge-outline text-xs">BIN ${entry.binNumber}</div>
+                                        </div>
+                                        
+                                        <p class="text-gray-600 text-sm mb-2">${entry.materialDescription}</p>
+                                        
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                            <div class="flex items-center space-x-1">
+                                                <i data-lucide="user" class="w-3 h-3"></i>
+                                                <span>${entry.user}</span>
+                                            </div>
+                                            <div class="flex items-center space-x-1">
+                                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                                <span>${formatDate(entry.timestamp)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-right ml-4">
+                                    <div class="text-2xl font-bold ${quantityColor}">
+                                        ${quantitySign}${entry.quantity}
+                                    </div>
+                                    <div class="text-xs text-gray-500">qty</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Show summary
+                document.getElementById('history-summary').classList.remove('hidden');
+                document.getElementById('history-summary-filtered').textContent = filteredHistory.length;
+                document.getElementById('history-summary-percentage').textContent = 
+                    Math.round((filteredHistory.length / history.length) * 100) + '%';
+                document.getElementById('history-summary-net-change').textContent = 
+                    (totalFilled - totalTaken >= 0 ? '+' : '') + (totalFilled - totalTaken).toLocaleString();
+            }
+
+            lucide.createIcons();
+        }
+
+        function resetHistoryFilters() {
+            document.getElementById('history-search').value = '';
+            document.getElementById('history-action-filter').value = 'all';
+            document.getElementById('history-sort').value = 'newest';
+            updateHistoryDisplay();
+        }
+
+        // Add history event listeners after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateToggleSwitch();
+            
+            // Add history search listeners
+            document.getElementById('history-search').addEventListener('input', updateHistoryDisplay);
+            document.getElementById('history-action-filter').addEventListener('change', updateHistoryDisplay);
+            document.getElementById('history-sort').addEventListener('change', updateHistoryDisplay);
+        });
+
+        console.log('✅ Material Management App Fully Loaded - Complete HTML Version with All Features');
+    </script>
+</body>
+</html>
